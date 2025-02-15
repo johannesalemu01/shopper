@@ -28,16 +28,20 @@ class _SellerScreenState extends State<SellerScreen> {
 
   final TextEditingController _productNameController = TextEditingController();
   final TextEditingController _productPriceController = TextEditingController();
+  final TextEditingController _productDescriptionController =
+      TextEditingController();
   final picker = ImagePicker();
   File? _imageFile;
   final supabase = Supabase.instance.client;
 
   int _selectedIndex = 0;
+  String _filterOption = 'all';
 
   Future<void> uploadProduct() async {
     if (_imageFile == null ||
         _productNameController.text.isEmpty ||
-        _productPriceController.text.isEmpty) {
+        _productPriceController.text.isEmpty ||
+        _productDescriptionController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in all fields")),
       );
@@ -57,10 +61,12 @@ class _SellerScreenState extends State<SellerScreen> {
       await FirebaseFirestore.instance.collection('products').add({
         'name': _productNameController.text,
         'price': double.parse(_productPriceController.text),
+        'description': _productDescriptionController.text,
         'imageUrl': publicUrl,
         'sellerId': FirebaseAuth.instance.currentUser!.uid,
         'buyerId': null,
         'timestamp': FieldValue.serverTimestamp(),
+        'isSold': false,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -71,6 +77,7 @@ class _SellerScreenState extends State<SellerScreen> {
         _imageFile = null;
         _productNameController.clear();
         _productPriceController.clear();
+        _productDescriptionController.clear();
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -123,6 +130,22 @@ class _SellerScreenState extends State<SellerScreen> {
                 hintStyle: TextStyle(color: Colors.blueGrey),
               ),
             ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _productDescriptionController,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blueGrey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.blueGrey),
+                ),
+                labelText: "Product Description",
+                hintText: 'Enter the description of the product',
+                hintStyle: TextStyle(color: Colors.blueGrey),
+              ),
+            ),
             const SizedBox(height: 35),
             GestureDetector(
               onTap: pickImage,
@@ -153,38 +176,74 @@ class _SellerScreenState extends State<SellerScreen> {
   Widget _listedProductsScreen() {
     final sellerId = FirebaseAuth.instance.currentUser?.uid;
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('products')
-          .where('sellerId', isEqualTo: sellerId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: DropdownButton<String>(
+            value: _filterOption,
+            onChanged: (String? newValue) {
+              setState(() {
+                _filterOption = newValue!;
+              });
+            },
+            items: <String>['all', 'sold', 'unsold']
+                .map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value.capitalize()),
+              );
+            }).toList(),
+          ),
+        ),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('products')
+                .where('sellerId', isEqualTo: sellerId)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text("No products listed yet."));
-        }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(child: Text("No products listed yet."));
+              }
 
-        final products = snapshot.data!.docs;
+              final products = snapshot.data!.docs.where((product) {
+                final productData =
+                    product.data() as Map<String, dynamic>? ?? {};
+                if (_filterOption == 'sold') {
+                  return productData['isSold'] ?? false;
+                } else if (_filterOption == 'unsold') {
+                  return !(productData['isSold'] ?? false);
+                }
+                return true;
+              }).toList();
 
-        return ListView.builder(
-          itemCount: products.length,
-          itemBuilder: (context, index) {
-            final product = products[index];
-            return ListTile(
-              leading: Image.network(product['imageUrl'], width: 50),
-              title: Text(product['name']),
-              subtitle: Text("Price: \$${product['price']}\n"
-                  "Listed: ${product['timestamp'].toDate()}"),
-              trailing: GestureDetector(
-                  onTap: () => removeProduct(product),
-                  child: Icon(Icons.delete)),
-            );
-          },
-        );
-      },
+              return ListView.builder(
+                itemCount: products.length,
+                itemBuilder: (context, index) {
+                  final product = products[index];
+                  final productData =
+                      product.data() as Map<String, dynamic>? ?? {};
+                  return ListTile(
+                    leading: Image.network(productData['imageUrl'], width: 50),
+                    title: Text(productData['name']),
+                    subtitle: Text("Price: \$${productData['price']}\n"
+                        "Listed: ${productData['timestamp'].toDate()}\n"
+                        "Status: ${productData['isSold'] ?? false ? 'Sold' : 'Unsold'}"),
+                    trailing: GestureDetector(
+                        onTap: () => removeProduct(product),
+                        child: Icon(Icons.delete)),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -319,5 +378,11 @@ class _SellerScreenState extends State<SellerScreen> {
         ],
       ),
     );
+  }
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1)}";
   }
 }

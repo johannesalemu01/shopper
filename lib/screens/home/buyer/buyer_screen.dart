@@ -10,10 +10,10 @@ import 'package:shopper/proviers/product_provider.dart';
 import 'package:shopper/screens/auth/login.dart';
 import 'package:shopper/screens/cart/cart_screen.dart';
 import 'package:shopper/screens/home/buyer/buyer_history.dart';
-import 'package:shopper/screens/home/buyer/chat.dart';
 import 'package:shopper/screens/home/buyer/products.dart';
 import 'package:shopper/shared/cart_icon.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shopper/screens/home/buyer/product_detail.dart';
 
 class BuyerScreen extends ConsumerStatefulWidget {
   const BuyerScreen({super.key});
@@ -112,12 +112,19 @@ class _BuyerScreenState extends ConsumerState<BuyerScreen> {
     });
   }
 
+  void navigateToDetail(BuildContext context, String productId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ProductDetailScreen(productId: productId),
+      ),
+    );
+  }
+
   int selectedIndex = 0;
 
   final List<Widget> navScreen = [
     ProductsScreen(),
     CartScreen(),
-    ChatScreen(),
     HistoryScreen()
   ];
 
@@ -131,7 +138,6 @@ class _BuyerScreenState extends ConsumerState<BuyerScreen> {
     final appBarTitles = [
       ' Product on Sale',
       null,
-      'Chat',
       null,
     ];
     return Scaffold(
@@ -235,10 +241,6 @@ class _BuyerScreenState extends ConsumerState<BuyerScreen> {
             BottomNavigationBarItem(
               icon: Icon(Icons.shopping_cart),
               label: 'Cart',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.chat),
-              label: 'Chat',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.history),

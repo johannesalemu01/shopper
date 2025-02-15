@@ -21,6 +21,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final totalPrice = ref.watch(cartTotalProvider);
 
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 231, 218, 206),
       appBar: AppBar(
         leading: GestureDetector(
           onTap: () => Navigator.push(
@@ -63,7 +64,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(30),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 15, vertical: 30),
                     child: Column(
                       children: cartProducts.map((product) {
                         return Container(
@@ -76,11 +78,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 children: [
                                   Image.network(
                                     product.image,
-                                    height: 60,
-                                    width: 60,
+                                    height: 90,
+                                    width: 90,
                                   ),
                                   const SizedBox(
-                                    width: 10,
+                                    width: 8,
                                   ),
                                   Text(product.name),
                                 ],

@@ -26,6 +26,7 @@ class HistoryNotifier extends StateNotifier<List<Purchase>> {
     ];
   }
 
+
   void clearHistory() {
     state = [];
   }

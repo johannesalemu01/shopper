@@ -17,6 +17,9 @@ Stream<List<Product>> product(ref) {
         name: data['name'] ?? 'No Name',
         price: data['price']?.toDouble() ?? 0.0,
         image: data['imageUrl'] ?? '',
+        description: data['description'] ?? 'No Description',
+        timestamp: (data['timestamp'] as Timestamp).toDate(),
+         isSold: data['isSold'] ?? false,
       );
     }).toList();
   });

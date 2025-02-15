@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shopper/models/product.dart';
 import 'package:shopper/proviers/product_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shopper/screens/home/buyer/product_detail.dart';
 
 class AnimatedZIndexItem extends StatefulWidget {
   final Product product;
@@ -31,11 +32,18 @@ class _AnimatedZIndexItemState extends State<AnimatedZIndexItem> {
   }
 
   bool isImageFetched = false;
+
   @override
   Widget build(BuildContext context) {
-    print(widget.product.image);
     return GestureDetector(
-      onTap: toggleCardState,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) =>
+                ProductDetailScreen(productId: widget.product.id),
+          ),
+        );
+      },
       child: Stack(
         children: [
           AnimatedPositioned(

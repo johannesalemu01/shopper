@@ -2,8 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shopper/proviers/cart_provider.dart';
-
 import 'package:shopper/proviers/history_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shopper/screens/home/buyer/buyer_screen.dart';
 
 class CheckoutScreen extends ConsumerWidget {
   final double totalPrice;
@@ -14,6 +15,46 @@ class CheckoutScreen extends ConsumerWidget {
     required this.totalPrice,
     required this.cartProducts,
   });
+
+  Future<void> confirmPurchase(BuildContext context, WidgetRef ref) async {
+    for (var product in cartProducts) {
+      await FirebaseFirestore.instance
+          .collection('products')
+          .doc(product.id)
+          .update({
+        'isSold': true,
+        'buyerId': FirebaseAuth.instance.currentUser?.uid,
+      });
+    }
+
+    ref.read(historyProvider.notifier).addPurchase(
+          totalPrice: totalPrice,
+          date: DateTime.now(),
+          sellerName: '${FirebaseAuth.instance.currentUser?.displayName}',
+        );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Order Confirmed!'),
+        content: const Text(
+            'Thank you for your purchase. Your order has been placed.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              ref.read(cartNotifierProvider.notifier).deleteAll();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => BuyerScreen()),
+                (Route<dynamic> route) => false,
+              );
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     User? user = FirebaseAuth.instance.currentUser;
@@ -40,9 +81,15 @@ class CheckoutScreen extends ConsumerWidget {
                 children: cartProducts.map((product) {
                   return ListTile(
                     leading:
-                        Image.network(product.image, height: 50, width: 50),
-                    title: Text(product.name),
-                    trailing: Text('\$${product.price}'),
+                        Image.network(product.image, height: 80, width: 80),
+                    title: Text(
+                      product.name,
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    trailing: Text(
+                      '\$${product.price}',
+                      style: TextStyle(fontSize: 14),
+                    ),
                   );
                 }).toList(),
               ),
@@ -67,31 +114,7 @@ class CheckoutScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 40),
             ElevatedButton(
-              onPressed: () {
-                ref.read(historyProvider.notifier).addPurchase(
-                      totalPrice: totalPrice,
-                      date: DateTime.now(),
-                      sellerName: '${user?.displayName}',
-                    );
-
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Order Confirmed!'),
-                    content: const Text(
-                        'Thank you for your purchase. Your order has been placed.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          ref.read(cartNotifierProvider.notifier).deleteAll();
-                          Navigator.popUntil(context, (route) => route.isFirst);
-                        },
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                );
-              },
+              onPressed: () => confirmPurchase(context, ref),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 minimumSize: const Size(double.infinity, 50),
